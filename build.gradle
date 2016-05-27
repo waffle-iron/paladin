@@ -1,0 +1,88 @@
+allprojects {
+    group 'com.paladin'
+    version '1.0.0-SNAPSHOT'
+
+    apply plugin: 'idea'
+    apply plugin: 'java'
+    apply plugin: 'jacoco'
+
+    sourceCompatibility = JavaVersion.VERSION_1_8
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+
+    project.ext.versions = [
+            gradle : '2.13',
+            jacoco : '0.7.6.201602180812',
+            jmockit: '1.23',
+            junit  : '4.12',
+            slf4j  : '1.7.21'
+    ]
+
+    jacoco {
+        toolVersion = versions.jacoco
+    }
+}
+
+subprojects {
+
+    dependencies {
+        compile "org.slf4j:slf4j-api:$versions.slf4j"
+        compile "org.slf4j:slf4j-simple:$versions.slf4j"
+
+        testCompile "org.jmockit:jmockit:$versions.jmockit"
+        testCompile "junit:junit:$versions.junit"
+    }
+
+    jacocoTestReport {
+        additionalSourceDirs = files(sourceSets.main.allSource.srcDirs)
+        sourceDirectories = files(sourceSets.main.allSource.srcDirs)
+        classDirectories =  files(sourceSets.main.output)
+        reports {
+            html.enabled = true
+            xml.enabled = true
+            csv.enabled = false
+        }
+    }
+
+    test {
+        testLogging {
+            events "passed", "skipped", "failed", "standardOut", "standardError"
+        }
+    }
+}
+
+task jacocoRootReport(type: JacocoReport) {
+    dependsOn = tasks.withType(Test)
+    additionalSourceDirs = files(sourceSets.main.allSource.srcDirs, subprojects.sourceSets.main.allSource.srcDirs)
+    sourceDirectories = files(sourceSets.main.allSource.srcDirs, subprojects.sourceSets.main.allSource.srcDirs)
+    classDirectories = files(sourceSets.main.output, subprojects.sourceSets.main.output)
+    executionData = files(jacocoTestReport.executionData, subprojects.jacocoTestReport.executionData)
+    reports {
+        html.enabled = true
+        xml.enabled = true
+        csv.enabled = false
+    }
+
+    onlyIf = {
+        true
+    }
+
+    doFirst {
+        executionData = files(executionData.findAll {
+            it.exists()
+        })
+    }
+}
+
+project(':paladin-server') {
+}
+
+project(':paladin-http-common') {
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = versions.gradle
+}
